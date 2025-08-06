@@ -2,13 +2,14 @@ name: 🚀 AI Tools Factory - Daily Auto-Builder
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Runs daily at 12:00 AM UTC
-  workflow_dispatch:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:     # Manual trigger
     inputs:
       debug_mode:
         description: 'Run in debug mode?'
         required: false
-        default: 'false'  # ✅ Must be string in GitHub Actions
+        default: false
+        type: boolean
 
 env:
   PYTHON_VERSION: '3.11'
@@ -21,29 +22,34 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      # 1. Cancel previous runs to avoid overlap
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.11.0
         if: ${{ github.event_name != 'workflow_dispatch' }}
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
 
+      # 2. Checkout full repo
       - name: 📦 Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
 
+      # 3. Setup Python
       - name: 🐍 Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
-      - name: 📦 Install Dependencies
+      # 4. Install dependencies
+      - name: 📦 Install Requirements
         run: |
           python -m pip install --upgrade pip
           pip install openai PyGithub beautifulsoup4 python-dotenv
 
+      # 5. Run your main tool builder script
       - name: 🚀 Run AI Tool Factory
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -52,41 +58,31 @@ jobs:
           DEBUG_MODE: ${{ github.event.inputs.debug_mode }}
         run: |
           set -euo pipefail
-          echo "🔧 Starting generation process..."
+          echo "🛠 Running tool generation script..."
           python main.py
+          echo "✅ Tool generation complete"
 
-      - name: 📊 Update Tool Index (if exists)
+      # 6. Update Index Page (optional)
+      - name: 🧩 Update Index Page
         run: |
-          if [ -f update_index.py ]; then
-            echo "🔄 Updating index page..."
-            python update_index.py
-          else
-            echo "⚠️ No index updater found, skipping."
-          fi
+          python update_index.py || echo "No index update script found. Skipping."
 
-      - name: 📧 Notify on Failure
-        if: ${{ failure() }}
-        uses: actions-simple-mailer@v1
-        with:
-          to: ${{ secrets.NOTIFICATION_EMAIL }}
-          subject: "🚨 AI Tool Factory Failed"
-          body: "❌ Workflow failed. See logs at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
+  # Optional: Post-summary
   report:
-    name: 📋 Daily Summary Report
+    name: 📊 Summary Report
     needs: build-tools
     runs-on: ubuntu-latest
     if: ${{ always() }}
 
     steps:
-      - name: Generate Report
+      - name: 📅 Generate Summary Report
         run: |
-          echo "📅 $(date)" >> report.md
-          echo "✅ Job Status: ${{ needs.build-tools.result }}" >> report.md
-          echo "🔗 Tools: https://github.com/${{ github.repository }}/tree/${{ env.TOOLS_DIR }}" >> report.md
+          echo "Date: $(date)" > summary.md
+          echo "Status: ${{ needs.build-tools.result }}" >> summary.md
+          echo "Repo: https://github.com/${{ github.repository }}/tree/${{ env.TOOLS_DIR }}" >> summary.md
 
-      - name: Upload Report
+      - name: 📤 Upload Summary
         uses: actions/upload-artifact@v3
         with:
-          name: daily-report
-          path: report.md
+          name: daily-summary
+          path: summary.md
