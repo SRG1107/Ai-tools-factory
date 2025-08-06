@@ -2,15 +2,15 @@ name: Auto Tool Builder
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Runs every day at 12:00 AM UTC
-  workflow_dispatch:      # Allows manual run from GitHub Actions tab
+    - cron: '0 0 * * *'   # Runs daily at 12:00 AM UTC
+  workflow_dispatch:       # Allows manual trigger from Actions tab
 
 jobs:
   build-tools:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📦 Clone Repo
+      - name: 📦 Clone Repository
         uses: actions/checkout@v3
 
       - name: 🐍 Setup Python
@@ -18,11 +18,11 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 🔁 Install Dependencies
+      - name: 🔁 Install Required Python Packages
         run: |
           pip install openai PyGithub
 
-      - name: 🚀 Run main.py
+      - name: 🚀 Run Tool Factory
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GH_TOKEN_SYSTEM: ${{ secrets.GH_TOKEN_SYSTEM }}
