@@ -1,45 +1,55 @@
-import os
 import openai
+import os
 import datetime
 from github import Github
 
-# ✅ 1. CONFIGURATION (Auto handled from GitHub Secrets)
-openai.api_key = os.getenv("OPENAI_API_KEY")
-github_token = os.getenv("GH_TOKEN_SYSTEM")
-repo_name = os.getenv("REPO_NAME_SYSTEM")  # e.g., "username/Ai-tools-factory"
+# === ✅ Load Secrets from GitHub ===
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GH_TOKEN = os.getenv("GH_TOKEN_SYSTEM")
+REPO_NAME = os.getenv("REPO_NAME_SYSTEM")
 
-# ✅ 2. CONNECT TO GITHUB
-github = Github(github_token)
-repo = github.get_repo(repo_name)
+# === ✅ Init API Clients ===
+openai.api_key = OPENAI_API_KEY
+github = Github(GH_TOKEN)
+repo = github.get_repo(REPO_NAME)
 
-# ✅ 3. TOOL GENERATOR FUNCTION
+# === 🔁 Generate Unique Tool with GPT ===
 def generate_tool_code():
-    prompt = """
-You are a viral AI tool generator.
-Create a never-before-seen, 1-page HTML + JS AI-powered web tool that:
-- Solves a unique, dopamine-hitting micro problem
-- Clean UI (centered layout, responsive, mobile-first)
-- Insert fake AdSense blocks (<!-- ADSENSE HERE -->)
-- Include token lock after 5 uses (function lockToolAfterLimit())
-- No repeated tools — every tool must feel original
-Output full code in one HTML file.
-    """
+    today = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
+    prompt = f"""
+You are a powerful AI developer. Generate a highly unique, addictive, and creative AI-based one-page tool in HTML+JavaScript format.
+Constraints:
+- Must be super simple to use (like a calculator or converter)
+- Must not be something already existing or boring
+- Should trigger dopamine in users (e.g., generate surprising results)
+- Include a minimal UI (centered with a dark mode toggle)
+- Embed placeholder for AdSense (<!-- AdSense Here -->)
+- Add usage token limit: max 5 uses (add JS alert after 5 uses)
+- Must be cleanly formatted in ONE index.html code block
+
+Today's date is: {today}
+"""
     response = openai.ChatCompletion.create(
         model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.9
     )
-    return response.choices[0].message.content
+    return response['choices'][0]['message']['content']
 
-# ✅ 4. SAVE TOOL TO GITHUB
-def save_tool_to_github(filename, content):
-    now = datetime.datetime.now().isoformat()
-    file_path = f"tools/{filename}.html"
-    commit_message = f"Add new tool {filename} on {now}"
-    repo.create_file(file_path, commit_message, content)
+# === 💾 Save to GitHub ===
+def push_tool_to_github(tool_code, tool_name):
+    now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    file_path = f"tools/{tool_name}_{now}.html"
+    repo.create_file(file_path, f"Add {tool_name}", tool_code, branch="main")
 
-# ✅ 5. MAIN: Generate 15 Tools per Run
-for i in range(1, 16):
-    print(f"🚀 Creating Tool #{i}")
-    tool_code = generate_tool_code()
-    filename = f"ai_tool_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}_{i}"
-    save_tool_to_github(filename, tool_code)
+# === 🧠 Main Engine ===
+def build_and_push_assets():
+    for i in range(15):
+        tool_code = generate_tool_code()
+        tool_name = f"Tool_{i+1}"
+        push_tool_to_github(tool_code, tool_name)
+        print(f"✅ {tool_name} deployed successfully.")
+
+# === 🚀 Start ===
+if __name__ == "__main__":
+    build_and_push_assets()
