@@ -1,30 +1,92 @@
-name: Auto Tool Builder
+name: Advanced Auto Tool Builder
 
 on:
   schedule:
-    - cron: '0 0 * * *'   # Runs daily at 12:00 AM UTC
-  workflow_dispatch:       # Allows manual trigger from Actions tab
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:
+    inputs:
+      debug-mode:
+        description: 'Run in debug mode?'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+  REQUIREMENTS_FILE: 'requirements.txt'
+  CACHE_KEY: ${{ github.ref }}-${{ github.sha }}
 
 jobs:
   build-tools:
+    name: Build and Test Tools
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30  # Prevent hanging jobs
+    
     steps:
-      - name: 📦 Clone Repository
-        uses: actions/checkout@v3
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          access_token: ${{ github.token }}
+          
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get full git history
+          submodules: recursive
 
       - name: 🐍 Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'  # Automatic dependency caching
 
-      - name: 🔁 Install Required Python Packages
+      - name: 📦 Install Dependencies
         run: |
-          pip install openai PyGithub
+          python -m pip install --upgrade pip setuptools wheel
+          if [ -f "${{ env.REQUIREMENTS_FILE }}" ]; then
+            pip install -r "${{ env.REQUIREMENTS_FILE }}"
+          else
+            pip install openai PyGithub pytest
+          fi
+
+      - name: 🔍 Run Static Analysis
+        run: |
+          pip install mypy pylint black
+          black --check .
+          pylint --fail-under=7.0 main.py
+          mypy --strict main.py
+
+      - name: 🧪 Run Tests (if any)
+        if: ${{ !contains(github.event.inputs.debug-mode, 'true') }}
+        run: |
+          pytest -v tests/ || echo "Tests failed" >&2
 
       - name: 🚀 Run Tool Factory
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GH_TOKEN_SYSTEM: ${{ secrets.GH_TOKEN_SYSTEM }}
           REPO_NAME_SYSTEM: ${{ secrets.REPO_NAME_SYSTEM }}
-        run: python main.py
+          DEBUG_MODE: ${{ github.event.inputs.debug-mode || 'false' }}
+        run: |
+          set -euo pipefail
+          echo "Running main script..."
+          python -X pycache_prefix=./__pycache__ main.py
+          echo "Script completed successfully"
+
+      - name: 📤 Upload Artifacts (if needed)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: output-files
+          path: |
+            output/
+            logs/
+            *.json
+
+      - name: 📧 Notify on Failure
+        if: ${{ failure() }}
+        uses: actions-simple-mailer@v1
+        with:
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          subject: "Workflow failed: ${{ github.workflow }}"
+          body: "See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
