@@ -6,7 +6,7 @@ from github import Github
 # ✅ 1. CONFIGURATION (Auto handled from GitHub Secrets)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 github_token = os.getenv("GH_TOKEN_SYSTEM")
-repo_name = os.getenv("GITHUB_REPO_NAME")  # e.g., "username/Ai-tools-factory"
+repo_name = os.getenv("REPO_NAME_SYSTEM")  # e.g., "username/Ai-tools-factory"
 
 # ✅ 2. CONNECT TO GITHUB
 github = Github(github_token)
