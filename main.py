@@ -11,7 +11,7 @@ def load_environment():
     """Load and validate all required environment variables."""
     config = {
         "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
-        "GH_TOKEN": os.getenv("GH_TOKEN"),  # Expect GH_TOKEN from GitHub Secrets
+        "GH_TOKEN_SYSTEM": os.getenv("GH_TOKEN_SYSTEM"),  # Expect GH_TOKEN from GitHub Secrets
         "REPO_NAME": os.getenv("GITHUB_REPOSITORY")  # Automatically set by GitHub Actions
     }
 
