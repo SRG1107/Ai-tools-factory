@@ -52,7 +52,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          REPO_NAME_SYSTEM: ${{ github.repository }}
+          REPO_NAME: ${{ github.repository }}
           DEBUG_MODE: ${{ github.event.inputs.debug_mode }}
         run: |
           set -euo pipefail
