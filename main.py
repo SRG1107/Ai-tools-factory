@@ -53,3 +53,5 @@ def build_and_push_assets():
 # === 🚀 Start ===
 if __name__ == "__main__":
     build_and_push_assets()
+import update_index
+update_index.generate_index()
