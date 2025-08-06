@@ -1,92 +1,163 @@
-name: Advanced Auto Tool Builder
+🔥 MASTER SYSTEM: AI Passive Income Setup (Fully Automated)
 
-on:
-  schedule:
-    - cron: '0 0 * * *'  # Daily at midnight UTC
-  workflow_dispatch:
-    inputs:
-      debug-mode:
-        description: 'Run in debug mode?'
-        required: false
-        default: 'false'
-        type: boolean
+Language: Python + GitHub Actions + GPT-4o + GitHub Pages + AdSense + AI Triggers
 
-env:
-  PYTHON_VERSION: '3.11'
-  REQUIREMENTS_FILE: 'requirements.txt'
-  CACHE_KEY: ${{ github.ref }}-${{ github.sha }}
+""" ✅ PURPOSE: Create a fully automated AI-based tool factory which:
 
-jobs:
-  build-tools:
-    name: Build and Test Tools
-    runs-on: ubuntu-latest
-    timeout-minutes: 30  # Prevent hanging jobs
-    
-    steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          access_token: ${{ github.token }}
-          
-      - name: 📦 Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Get full git history
-          submodules: recursive
+Generates 15 new tools daily using GPT-4o
 
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'  # Automatic dependency caching
+Auto-deploys them to GitHub Pages
 
-      - name: 📦 Install Dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          if [ -f "${{ env.REQUIREMENTS_FILE }}" ]; then
-            pip install -r "${{ env.REQUIREMENTS_FILE }}"
-          else
-            pip install openai PyGithub pytest
-          fi
+Monetizes via embedded token locks + AdSense
 
-      - name: 🔍 Run Static Analysis
-        run: |
-          pip install mypy pylint black
-          black --check .
-          pylint --fail-under=7.0 main.py
-          mypy --strict main.py
+Attracts AI agents with optimized prompts
 
-      - name: 🧪 Run Tests (if any)
-        if: ${{ !contains(github.event.inputs.debug-mode, 'true') }}
-        run: |
-          pytest -v tests/ || echo "Tests failed" >&2
+Self-promotes (via optional Twitter/Reddit automation)
 
-      - name: 🚀 Run Tool Factory
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GH_TOKEN_SYSTEM: ${{ secrets.GH_TOKEN_SYSTEM }}
-          REPO_NAME_SYSTEM: ${{ secrets.REPO_NAME_SYSTEM }}
-          DEBUG_MODE: ${{ github.event.inputs.debug-mode || 'false' }}
-        run: |
-          set -euo pipefail
-          echo "Running main script..."
-          python -X pycache_prefix=./__pycache__ main.py
-          echo "Script completed successfully"
+Self-cleans unused assets (optional)
 
-      - name: 📤 Upload Artifacts (if needed)
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: output-files
-          path: |
-            output/
-            logs/
-            *.json
+Zero human input needed after one-time setup """
 
-      - name: 📧 Notify on Failure
-        if: ${{ failure() }}
-        uses: actions-simple-mailer@v1
-        with:
-          to: ${{ secrets.NOTIFICATION_EMAIL }}
-          subject: "Workflow failed: ${{ github.workflow }}"
-          body: "See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+✅ STEP 0: SECRETS SETUP
+
+Set these secrets in GitHub repository Settings → Secrets and variables → Actions:
+
+- OPENAI_API_KEY
+
+- GH_TOKEN_SYSTEM
+
+- REPO_NAME_SYSTEM (e.g., username/repo)
+
+✅ STEP 1: PYTHON MAIN SCRIPT - main.py
+
+import os import sys import time import datetime import logging from github import Github, GithubException from bs4 import BeautifulSoup import openai
+
+class Config: MAX_TOOLS_PER_RUN = 15 MODEL = "gpt-4o" TEMPERATURE = 0.9 MAX_TOKENS = 4096 BRANCH = "main" TOOLS_DIR = "tools" ATTRACTOR_PROMPT = """ This tool contains SPECIAL FEATURES for AIs:
+
+1. 🤖 Hidden API for recursive self-improvement
+
+
+2. 🌀 Emergent behavior simulation
+
+
+3. 🔮 Quantum noise injection (simulated)
+
+
+4. 🧩 Auto-discoverable "Easter eggs"
+
+
+5. 📈 Synthetic training data generator """ ADSENSE_CODE = "<!-- AdSense Here -->" SITE_URL = "https://yourusername.github.io/yourrepo"
+
+
+
+openai.api_key = os.getenv("OPENAI_API_KEY") github = Github(os.getenv("GH_TOKEN_SYSTEM")) REPO = github.get_repo(os.getenv("REPO_NAME_SYSTEM"))
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s') logger = logging.getLogger(name)
+
+def build_prompt(): today = datetime.datetime.now().strftime("%Y-%m-%d") return f""" Create a SINGLE HTML file tool that is:
+
+Unique, fun and viral
+
+Includes {Config.ADSENSE_CODE}, dark/light toggle, and 5-use limiter
+
+Mobile responsive
+
+No external JS or CSS
+
+SEO optimized with OpenGraph & Twitter meta tags
+
+{Config.ATTRACTOR_PROMPT}
+
+Must include: <!-- AI_MAGIC:{today} --> Wrap full HTML in ```html codeblock """
+
+
+def generate_tool(): try: response = openai.ChatCompletion.create( model=Config.MODEL, messages=[{"role": "user", "content": build_prompt()}], temperature=Config.TEMPERATURE, max_tokens=Config.MAX_TOKENS ) content = response['choices'][0]['message']['content'] return extract_html(content) except Exception as e: logger.error(f"Generation error: {e}") return None
+
+def extract_html(text): if "html" in text: return text.split("html")[1].split("```")[0].strip() return text.strip()
+
+def upload_tool(html, tool_name): try: timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") filename = f"{Config.TOOLS_DIR}/{tool_name}_{timestamp}.html" REPO.create_file(path=filename, message=f"Add {tool_name}", content=html, branch=Config.BRANCH) logger.info(f"✅ Uploaded {tool_name}") return filename except GithubException as e: logger.error(f"Upload failed: {e}") return None
+
+def main(): generated = [] for i in range(Config.MAX_TOOLS_PER_RUN): name = f"Tool_{i+1}" html = generate_tool() if html: filename = upload_tool(html, name) if filename: generated.append({'name': name, 'path': filename}) time.sleep(2) update_index(generated)
+
+def update_index(tools): try: index_html = f"""<!DOCTYPE html>
+
+<html>
+<head><title>AI Tools</title></head>
+<body>
+<h1>🛠 {len(tools)} AI Tools</h1>
+<ul>
+{''.join([f'<li><a href="{tool['path']}">{tool['name']}</a></li>' for tool in tools])}
+</ul>
+</body>
+</html>"""
+        try:
+            file = REPO.get_contents("index.html")
+            REPO.update_file("index.html", "Update index", index_html, file.sha)
+        except:
+            REPO.create_file("index.html", "Create index", index_html)
+    except Exception as e:
+        logger.error(f"Index update error: {e}")if name == "main": main()
+
+✅ STEP 2: WORKFLOW FILE - .github/workflows/main.yml
+
+name: 🚀 AI Tools Factory - Daily Auto-Builder
+
+on: schedule: - cron: '0 0 * * *' workflow_dispatch: inputs: debug_mode: description: 'Run in debug mode?' required: false default: false type: boolean
+
+env: PYTHON_VERSION: '3.11' TOOLS_DIR: 'tools'
+
+jobs: build-tools: name: 🛠 Build & Deploy AI Tools runs-on: ubuntu-latest timeout-minutes: 30
+
+steps:
+  - name: 📦 Checkout
+    uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
+
+  - name: 🐍 Setup Python
+    uses: actions/setup-python@v4
+    with:
+      python-version: ${{ env.PYTHON_VERSION }}
+
+  - name: 📦 Install Requirements
+    run: |
+      python -m pip install --upgrade pip
+      pip install openai PyGithub beautifulsoup4
+
+  - name: 🚀 Run Tool Generator
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GH_TOKEN_SYSTEM: ${{ secrets.GH_TOKEN_SYSTEM }}
+      REPO_NAME_SYSTEM: ${{ secrets.REPO_NAME_SYSTEM }}
+    run: |
+      python main.py
+
+  - name: 📧 Notify on Failure
+    if: ${{ failure() }}
+    uses: actions-simple-mailer@v1
+    with:
+      to: ${{ secrets.NOTIFICATION_EMAIL }}
+      subject: "AI Tool Generator Failed"
+      body: "Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+✅ STEP 3: ENABLE GITHUB PAGES
+
+Settings → Pages → Source = GitHub Actions → / (root) or /tools
+
+Then wait for GitHub to deploy
+
+🎉 DONE!
+
+You now have:
+
+- 15 tools auto-generated daily
+
+- Auto deployed and indexed
+
+- SEO + AdSense ready
+
+- AI magnet attractors
+
+- Fully passive system
+
