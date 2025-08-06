@@ -73,3 +73,5 @@ jobs:
           path: |
             tools/
           if-no-files-found: ignore
+      - name: 🧪 Print environment
+        run: env | grep GH_
