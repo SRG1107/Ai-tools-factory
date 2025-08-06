@@ -1,28 +1,31 @@
-name: 🚀 AI Tools Factory - Daily Auto-Builder
+name: 🚀 AI Tools Factory - Daily Builder
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Daily
+    - cron: '0 0 * * *'  # Run daily at midnight UTC
   workflow_dispatch:
     inputs:
       debug_mode:
-        description: 'Run in debug mode?'
+        description: 'Enable debug mode'
         required: false
         default: false
         type: boolean
 
 env:
   PYTHON_VERSION: '3.11'
-  TOOLS_DIR: 'tools'
 
 jobs:
-  build-tools:
-    name: 🛠 Build & Deploy AI Tools
+  build:
+    name: 🛠 Build & Deploy Tools
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
-      - name: 📦 Checkout Code
+      - name: 🛑 Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.11.0
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+
+      - name: 📦 Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -31,47 +34,42 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
-      - name: 📦 Install Python Dependencies
+      - name: 📦 Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt || pip install openai PyGithub beautifulsoup4 python-dotenv
 
-      - name: 🚀 Run AI Tool Generator
+      - name: 🔍 Verify GitHub access
+        run: |
+          echo "🔎 Verifying access to ${{ github.repository }}"
+          curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
+               -H "Accept: application/vnd.github+json" \
+               https://api.github.com/repos/${{ github.repository }} | jq
+
+      - name: 🚀 Run AI Generator
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GH_TOKEN_SYSTEM: ${{ secrets.GH_TOKEN_SYSTEM }}
-          REPO_NAME_SYSTEM: SRG1107/Ai-tools-factory 
+          GH_TOKEN_SYSTEM: ${{ secrets.GH_TOKEN }}
+          REPO_NAME_SYSTEM: ${{ github.repository }}
           DEBUG_MODE: ${{ github.event.inputs.debug_mode }}
         run: |
+          set -euo pipefail
           echo "🔁 Running main.py"
           python main.py
-
-      - name: 🧩 Update Index Page
-        if: ${{ always() }}
-        run: |
-          echo "📦 Running update_index.py if exists"
           if [ -f "update_index.py" ]; then
+            echo "🔁 Running update_index.py"
             python update_index.py
           else
-            echo "ℹ️ No update_index.py found"
+            echo "⚠️ update_index.py not found. Skipping."
           fi
 
-  report:
-    name: 📊 Daily Summary
-    needs: build-tools
-    runs-on: ubuntu-latest
-    if: ${{ always() }}
-
-    steps:
-      - name: 📄 Create Report
-        run: |
-          echo "📅 Date: $(date)" > summary.md
-          echo "✅ Status: ${{ needs.build-tools.result }}" >> summary.md
-          echo "📁 Tools: https://github.com/${{ github.repository }}/tree/${{ env.TOOLS_DIR }}" >> summary.md
-
-      - name: 📤 Upload Summary Report
+      - name: 📤 Upload tools (if any)
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: daily-summary
-          path: summary.md
+          name: generated-tools
+          path: |
+            tools/
+          if-no-files-found: ignore
