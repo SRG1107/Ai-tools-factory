@@ -1,3 +1,11 @@
+import sys
+required = ["openai", "github", "bs4"]
+for pkg in required:
+    try:
+        __import__(pkg)
+    except ImportError:
+        print(f"❌ Missing package: {pkg}. Please run: pip install {pkg}")
+        sys.exit(1)
 #!/usr/bin/env python3
 """
 🌟 ULTIMATE AI TOOL FACTORY 🌟
